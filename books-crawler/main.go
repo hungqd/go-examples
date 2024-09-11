@@ -8,6 +8,7 @@ import (
 	"strings"
 	"sync"
 	"syscall"
+	"time"
 
 	"github.com/gocolly/colly/v2"
 	"github.com/hungqd/books-crawler/book"
@@ -18,7 +19,15 @@ func main() {
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, syscall.SIGINT, syscall.SIGTERM)
 
-	c := colly.NewCollector()
+	c := colly.NewCollector(
+		colly.Async(true),
+		// colly.Debugger(&debug.LogDebugger{}),
+	)
+
+	c.Limit(&colly.LimitRule{
+		Parallelism: 4,
+		RandomDelay: 2 * time.Second,
+	})
 
 	c.OnRequest(func(r *colly.Request) {
 		log.Println("Visiting", r.URL)
@@ -94,6 +103,8 @@ func main() {
 	}()
 
 	c.Visit("http://books.toscrape.com/index.html")
+	c.Wait()
+
 	close(books)
 
 	wg.Wait()
