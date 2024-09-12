@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -12,9 +11,11 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/hungqd/books-service/book"
+	"github.com/hungqd/books-service/controller"
 	"github.com/joho/godotenv"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
+	"gorm.io/gorm/logger"
 )
 
 func main() {
@@ -24,15 +25,19 @@ func main() {
 	}
 
 	connectionString := os.Getenv("DB_CONNECTION_STRING")
-	db, err := gorm.Open(postgres.Open(connectionString), &gorm.Config{})
+	db, err := gorm.Open(postgres.Open(connectionString), &gorm.Config{
+		Logger: logger.Default.LogMode(logger.Info),
+	})
 	if err != nil {
 		log.Fatalf("Error connecting database: %v\n", err)
 	}
 	repository := book.NewRepository(db)
 	bookService := book.NewService(repository)
-	fmt.Printf("%v\n", bookService)
 
 	r := gin.Default()
+
+	bookController := controller.NewBookController(bookService)
+	r.POST("/books", bookController.CreateBook)
 
 	srv := http.Server{
 		Addr:    ":8080",
