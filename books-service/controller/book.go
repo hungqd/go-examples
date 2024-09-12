@@ -28,7 +28,7 @@ func (b *bookController) CreateBook(c *gin.Context) {
 			return
 		}
 	}
-	c.JSON(200, created)
+	c.JSON(201, created)
 }
 
 func NewBookController(service book.Service) BookController {

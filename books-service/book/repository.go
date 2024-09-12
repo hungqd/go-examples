@@ -17,7 +17,7 @@ func (r *repository) SaveBook(book *Book) error {
 }
 
 func NewRepository(db *gorm.DB) Repository {
-	db.AutoMigrate(&Book{})
+	// db.AutoMigrate(&Book{})
 	return &repository{
 		db,
 	}
