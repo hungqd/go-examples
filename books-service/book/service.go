@@ -1,12 +1,12 @@
 package book
 
 type CreateBook struct {
-	Thumbnail string
-	DetailURL string
-	Title     string
-	Rating    int
-	Price     string
-	Instock   bool
+	Thumbnail string `binding:"required"`
+	DetailURL string `binding:"required"`
+	Title     string `binding:"required"`
+	Rating    int    `binding:"required"`
+	Price     string `binding:"required"`
+	Instock   bool   `binding:"required"`
 }
 
 type Service interface {

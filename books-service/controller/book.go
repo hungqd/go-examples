@@ -17,7 +17,10 @@ type bookController struct {
 // CreateBook implements BookController.
 func (b *bookController) CreateBook(c *gin.Context) {
 	var data book.CreateBook
-	c.ShouldBind(&data)
+	if err := c.ShouldBind(&data); err != nil {
+		c.JSON(400, gin.H{"error": err})
+		return
+	}
 	created, err := b.service.CreateBook(&data)
 	if err != nil {
 		if err.(*pgconn.PgError) != nil {
