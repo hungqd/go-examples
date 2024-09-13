@@ -14,7 +14,11 @@ func GetHandler(bookService book.Service) http.Handler {
 	r.Use(gin.Recovery())
 
 	bookController := controller.NewBookController(bookService)
-	r.POST("/books", bookController.CreateBook)
+	bookGroup := r.Group("/books")
+	{
+		bookGroup.GET("/", bookController.GetBooks)
+		bookGroup.POST("/", bookController.CreateBook)
+	}
 
 	return r.Handler()
 }

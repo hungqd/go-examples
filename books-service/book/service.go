@@ -10,11 +10,21 @@ type CreateBook struct {
 }
 
 type Service interface {
+	GetBooks() (*[]Book, error)
 	CreateBook(book *CreateBook) (*Book, error)
 }
 
 type service struct {
 	r Repository
+}
+
+// GetBooks implements Service.
+func (s *service) GetBooks() (*[]Book, error) {
+	books, err := s.r.GetBooks()
+	if err != nil {
+		return nil, err
+	}
+	return books, nil
 }
 
 // CreateBook implements Service.
