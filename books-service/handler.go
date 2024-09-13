@@ -10,6 +10,8 @@ import (
 
 func GetHandler(bookService book.Service) http.Handler {
 	r := gin.Default()
+	r.Use(gin.Logger())
+	r.Use(gin.Recovery())
 
 	bookController := controller.NewBookController(bookService)
 	r.POST("/books", bookController.CreateBook)
