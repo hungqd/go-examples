@@ -9,23 +9,16 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/gin-gonic/gin"
 	"github.com/hungqd/books-service/book"
-	"github.com/hungqd/books-service/controller"
-	"github.com/joho/godotenv"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
 )
 
 func main() {
-	err := godotenv.Load()
-	if err != nil {
-		log.Fatal("Error loading .env file")
-	}
+	config := MustGetConfig()
 
-	connectionString := os.Getenv("DB_CONNECTION_STRING")
-	db, err := gorm.Open(postgres.Open(connectionString), &gorm.Config{
+	db, err := gorm.Open(postgres.Open(config.DbConnectionString), &gorm.Config{
 		Logger: logger.Default.LogMode(logger.Info),
 	})
 	if err != nil {
@@ -34,14 +27,9 @@ func main() {
 	repository := book.NewRepository(db)
 	bookService := book.NewService(repository)
 
-	r := gin.Default()
-
-	bookController := controller.NewBookController(bookService)
-	r.POST("/books", bookController.CreateBook)
-
 	srv := http.Server{
 		Addr:    ":8080",
-		Handler: r.Handler(),
+		Handler: GetHandler(bookService),
 	}
 
 	go func() {
