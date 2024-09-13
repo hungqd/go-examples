@@ -1,5 +1,11 @@
 package book
 
+import "errors"
+
+var (
+	ErrBookAlreadyExists = errors.New("book already exists")
+)
+
 type CreateBook struct {
 	Thumbnail string `binding:"required"`
 	DetailURL string `binding:"required"`
@@ -37,7 +43,14 @@ func (s *service) CreateBook(book *CreateBook) (*Book, error) {
 		Price:     book.Price,
 		Instock:   book.Instock,
 	}
-	err := s.r.SaveBook(&entity)
+	exist, err := s.r.ExistByDetailURL(book.DetailURL)
+	if err != nil {
+		return nil, err
+	}
+	if exist {
+		return nil, ErrBookAlreadyExists
+	}
+	err = s.r.SaveBook(&entity)
 	return &entity, err
 }
 

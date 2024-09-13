@@ -6,8 +6,6 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/hungqd/books-service/book"
-	"github.com/jackc/pgx/v5/pgconn"
-	"github.com/mattn/go-sqlite3"
 )
 
 type BookController interface {
@@ -62,8 +60,8 @@ func (b *bookController) CreateBook(c *gin.Context) {
 	}
 	created, err := b.service.CreateBook(&data)
 	if err != nil {
-		switch err.(type) {
-		case *pgconn.PgError, sqlite3.Error:
+		switch err {
+		case book.ErrBookAlreadyExists:
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		default:
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
