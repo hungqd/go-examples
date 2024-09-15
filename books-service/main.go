@@ -29,7 +29,7 @@ func main() {
 
 	srv := http.Server{
 		Addr:    ":8080",
-		Handler: GetHandler(bookService),
+		Handler: NewHandler(bookService),
 	}
 
 	go func() {

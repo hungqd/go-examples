@@ -32,7 +32,7 @@ func TestCreateBook(t *testing.T) {
 	repo := book.NewRepository(db)
 	service := book.NewService(repo)
 
-	handler := GetHandler(service)
+	handler := NewHandler(service)
 
 	tests := []struct {
 		name             string

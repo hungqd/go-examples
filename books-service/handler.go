@@ -8,7 +8,7 @@ import (
 	"github.com/hungqd/books-service/controller"
 )
 
-func GetHandler(bookService book.Service) http.Handler {
+func NewHandler(bookService book.Service) http.Handler {
 	r := gin.Default()
 	r.Use(gin.Logger())
 	r.Use(gin.Recovery())
@@ -16,8 +16,8 @@ func GetHandler(bookService book.Service) http.Handler {
 	bookController := controller.NewBookController(bookService)
 	bookGroup := r.Group("/books")
 	{
-		bookGroup.GET("/", bookController.GetBooks)
-		bookGroup.POST("/", bookController.CreateBook)
+		bookGroup.GET("", bookController.GetBooks)
+		bookGroup.POST("", bookController.CreateBook)
 	}
 
 	return r.Handler()
