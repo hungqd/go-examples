@@ -95,10 +95,15 @@ func main() {
 
 	var wg sync.WaitGroup
 
+	bookService := book.NewService()
+
 	go func() {
 		defer wg.Done()
 		for book := range books {
-			fmt.Println(book.Title, book.DetailURL)
+			err := bookService.SaveBook(book)
+			if err != nil {
+				fmt.Printf("Error: %v\n", err)
+			}
 		}
 	}()
 
