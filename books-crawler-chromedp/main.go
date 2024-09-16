@@ -5,7 +5,10 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"os"
+	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/chromedp/cdproto/cdp"
 	"github.com/chromedp/chromedp"
@@ -27,6 +30,26 @@ func getRating(ratingElemClass string) int {
 	cls := classes[len(classes)-1]
 	rating := ratingMap[strings.ToLower(cls)]
 	return rating
+}
+
+func takeScreenShot(ctx context.Context, description string) {
+	var buf []byte
+	err := chromedp.Run(ctx, chromedp.CaptureScreenshot(&buf))
+	if err != nil {
+		log.Printf("Take screenshot error: %v\n", err)
+		return
+	}
+	screenshotDir := filepath.Join(".", "screenshots")
+	err = os.MkdirAll(screenshotDir, os.ModePerm)
+	if err != nil {
+		log.Printf("Create screenshot directory error: %v\n", err)
+		return
+	}
+
+	outfile := filepath.Join(screenshotDir, time.Now().Format("20060102150405")+"_"+description+".png")
+	if err := os.WriteFile(outfile, buf, 0o644); err != nil {
+		log.Printf("Save screenshot error: %v\n", err)
+	}
 }
 
 func main() {
@@ -63,6 +86,8 @@ func main() {
 		fmt.Println("===============================================")
 		fmt.Printf("PAGE: %s\n", url)
 
+		takeScreenShot(ctx, "PAGE")
+
 		books := make([]*Book, 0, len(bookNodes))
 
 		for _, bookNode := range bookNodes {
@@ -70,7 +95,8 @@ func main() {
 			var thumbnail, url, title, price, instockText string
 			var ratingElemClass string
 
-			err := chromedp.Run(ctx,
+			timeoutCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
+			err := chromedp.Run(timeoutCtx,
 				chromedp.AttributeValue(".image_container a img", "src", &thumbnail, &ok, chromedp.ByQuery, chromedp.FromNode(bookNode)),
 				chromedp.AttributeValue(".image_container a", "href", &url, &ok, chromedp.ByQuery, chromedp.FromNode(bookNode)),
 				chromedp.Text("h3 > a", &title, chromedp.ByQuery, chromedp.FromNode(bookNode)),
@@ -78,7 +104,13 @@ func main() {
 				chromedp.Text("p.price_color", &price, chromedp.ByQuery, chromedp.FromNode(bookNode)),
 				chromedp.Text("p.instock", &instockText, chromedp.ByQuery, chromedp.FromNode(bookNode)),
 			)
-			if err != nil {
+			cancel()
+			if errors.Is(context.DeadlineExceeded, err) {
+				takeScreenShot(ctx, "timeout waiting for next button")
+				log.Printf("Parse book timeout: %v\n", err)
+				break
+			} else if err != nil {
+				log.Printf("Book Node: %+v\n", bookNode.Dump("", "  ", true))
 				log.Fatal("Parse book item error: ", err)
 			}
 
@@ -96,12 +128,15 @@ func main() {
 			fmt.Printf("%v\n", book)
 		}
 
+		timeoutCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
 		nextPageSelector := ".pager .next a"
-		err = chromedp.Run(ctx,
+		err = chromedp.Run(timeoutCtx,
 			chromedp.WaitVisible(nextPageSelector, chromedp.ByQueryAll),
 			chromedp.Click(nextPageSelector, chromedp.NodeVisible),
 		)
+		cancel()
 		if errors.Is(context.DeadlineExceeded, err) {
+			takeScreenShot(ctx, "timeout waiting for next button")
 			break
 		} else if err != nil {
 			log.Fatal(`Wait for "next" button error: `, err)
