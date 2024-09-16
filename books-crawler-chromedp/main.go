@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
 	"strings"
@@ -29,58 +30,82 @@ func getRating(ratingElemClass string) int {
 }
 
 func main() {
-	allocator, cancel := chromedp.NewRemoteAllocator(
-		context.Background(),
-		"ws://localhost:9222",
-	)
-	defer cancel()
+	// allocator, cancel := chromedp.NewRemoteAllocator(
+	// 	context.Background(),
+	// 	"ws://localhost:9222",
+	// )
+	// defer cancel()
 
-	ctx, cancel := chromedp.NewContext(allocator)
+	// ctx, cancel := chromedp.NewContext(allocator)
+	// defer cancel()
+
+	ctx, cancel := chromedp.NewContext(context.Background())
 	defer cancel()
 
 	var bookNodes []*cdp.Node
 
 	err := chromedp.Run(ctx,
 		chromedp.Navigate("http://books.toscrape.com/index.html"),
-		chromedp.WaitVisible("article.product_pod", chromedp.ByQueryAll),
-		chromedp.Nodes("article.product_pod", &bookNodes, chromedp.ByQueryAll),
 	)
 
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	books := make([]*Book, 0, len(bookNodes))
-
-	for _, bookNode := range bookNodes {
-		var ok bool
-		var thumbnail, url, title, price, instockText string
-		var ratingElemClass string
-
-		err := chromedp.Run(ctx,
-			chromedp.AttributeValue(".image_container a img", "src", &thumbnail, &ok, chromedp.ByQuery, chromedp.FromNode(bookNode)),
-			chromedp.AttributeValue(".image_container a", "href", &url, &ok, chromedp.ByQuery, chromedp.FromNode(bookNode)),
-			chromedp.Text("h3 > a", &title, chromedp.ByQuery, chromedp.FromNode(bookNode)),
-			chromedp.AttributeValue(".star-rating", "class", &ratingElemClass, &ok, chromedp.ByQuery, chromedp.FromNode(bookNode)),
-			chromedp.Text("p.price_color", &price, chromedp.ByQuery, chromedp.FromNode(bookNode)),
-			chromedp.Text("p.instock", &instockText, chromedp.ByQuery, chromedp.FromNode(bookNode)),
+	for {
+		var url string
+		chromedp.Run(ctx,
+			chromedp.WaitVisible("article.product_pod", chromedp.ByQueryAll),
+			chromedp.Location(&url),
+			chromedp.Nodes("article.product_pod", &bookNodes, chromedp.ByQueryAll),
 		)
-		if err != nil {
-			log.Fatal("Error:", err)
+
+		fmt.Println("===============================================")
+		fmt.Printf("PAGE: %s\n", url)
+
+		books := make([]*Book, 0, len(bookNodes))
+
+		for _, bookNode := range bookNodes {
+			var ok bool
+			var thumbnail, url, title, price, instockText string
+			var ratingElemClass string
+
+			err := chromedp.Run(ctx,
+				chromedp.AttributeValue(".image_container a img", "src", &thumbnail, &ok, chromedp.ByQuery, chromedp.FromNode(bookNode)),
+				chromedp.AttributeValue(".image_container a", "href", &url, &ok, chromedp.ByQuery, chromedp.FromNode(bookNode)),
+				chromedp.Text("h3 > a", &title, chromedp.ByQuery, chromedp.FromNode(bookNode)),
+				chromedp.AttributeValue(".star-rating", "class", &ratingElemClass, &ok, chromedp.ByQuery, chromedp.FromNode(bookNode)),
+				chromedp.Text("p.price_color", &price, chromedp.ByQuery, chromedp.FromNode(bookNode)),
+				chromedp.Text("p.instock", &instockText, chromedp.ByQuery, chromedp.FromNode(bookNode)),
+			)
+			if err != nil {
+				log.Fatal("Error:", err)
+			}
+
+			books = append(books, &Book{
+				Thumbnail: thumbnail,
+				DetailURL: url,
+				Title:     title,
+				Rating:    getRating(ratingElemClass),
+				Price:     price,
+				Instock:   strings.Contains("In stock", strings.TrimSpace(instockText)),
+			})
 		}
 
-		books = append(books, &Book{
-			Thumbnail: thumbnail,
-			DetailURL: url,
-			Title:     title,
-			Rating:    getRating(ratingElemClass),
-			Price:     price,
-			Instock:   strings.Contains("In stock", strings.TrimSpace(instockText)),
-		})
-	}
+		for _, book := range books {
+			fmt.Printf("%v\n", book)
+		}
 
-	for _, book := range books {
-		fmt.Printf("%v\n", book)
+		nextPageSelector := ".pager .next a"
+		err = chromedp.Run(ctx,
+			chromedp.WaitVisible(nextPageSelector, chromedp.ByQueryAll),
+			chromedp.Click(nextPageSelector, chromedp.NodeVisible),
+		)
+		if errors.Is(context.DeadlineExceeded, err) {
+			break
+		} else if err != nil {
+			log.Fatal("Error: ", err)
+		}
 	}
 }
 
