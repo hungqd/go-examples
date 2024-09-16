@@ -79,7 +79,7 @@ func main() {
 				chromedp.Text("p.instock", &instockText, chromedp.ByQuery, chromedp.FromNode(bookNode)),
 			)
 			if err != nil {
-				log.Fatal("Error:", err)
+				log.Fatal("Parse book item error: ", err)
 			}
 
 			books = append(books, &Book{
@@ -104,7 +104,7 @@ func main() {
 		if errors.Is(context.DeadlineExceeded, err) {
 			break
 		} else if err != nil {
-			log.Fatal("Error: ", err)
+			log.Fatal(`Wait for "next" button error: `, err)
 		}
 	}
 }
